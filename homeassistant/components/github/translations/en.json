@@ -2,7 +2,8 @@
     "config": {
         "abort": {
             "already_configured": "Service is already configured",
-            "could_not_register": "Could not register integration with GitHub"
+            "could_not_register": "Could not register integration with GitHub",
+            "reauth_successful": "Re-authentication was successful"
         },
         "progress": {
             "wait_for_device": "1. Open {url} \n2.Paste the following key to authorize the integration: \n```\n{code}\n```\n"
@@ -13,6 +14,22 @@
                     "repositories": "Select repositories to track."
                 },
                 "title": "Configure repositories"
+            },
+            "user": {
+                "data": {
+                    "repo_scope": "Grant full access to repositories"
+                },
+                "description": "Granting full access to repositories is needed if you want to use this integration with private repositories."
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "repo_scope": "Grant full access to repositories",
+                    "repositories": "Select repositories to track."
+                }
             }
         }
     }

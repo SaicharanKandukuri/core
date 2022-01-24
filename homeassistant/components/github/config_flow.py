@@ -27,6 +27,7 @@ import homeassistant.helpers.config_validation as cv
 from .const import (
     CLIENT_ID,
     CONF_ACCESS_TOKEN,
+    CONF_REPO_SCOPE,
     CONF_REPOSITORIES,
     DEFAULT_REPOSITORIES,
     DOMAIN,
@@ -78,6 +79,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._device: GitHubDeviceAPI | None = None
         self._login: GitHubLoginOauthModel | None = None
         self._login_device: GitHubLoginDeviceModel | None = None
+        self._repo_scope: bool | None = None
+        self._reauth = False
 
     async def async_step_user(
         self,
@@ -87,6 +90,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
 
+        if not user_input:
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema(
+                    {
+                        vol.Optional(CONF_REPO_SCOPE, default=False): cv.boolean,
+                    }
+                ),
+            )
+
+        self._repo_scope = user_input[CONF_REPO_SCOPE]
+
         return await self.async_step_device(user_input)
 
     async def async_step_device(
@@ -94,6 +109,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         user_input: dict[str, Any] | None = None,
     ) -> FlowResult:
         """Handle device steps."""
+        if existing_entry := await self.async_set_unique_id(DOMAIN):
+            self._repo_scope = existing_entry.options.get(CONF_REPO_SCOPE, False)
 
         async def _wait_for_login() -> None:
             # mypy is not aware that we can't get here without having these set already
@@ -118,7 +135,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            response = await self._device.register()
+            response = await self._device.register(
+                **{"scope": "repo" if self._repo_scope else ""}
+            )
             self._login_device = response.data
         except GitHubException as exception:
             LOGGER.exception(exception)
@@ -140,6 +159,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except GitHubException as exception:
             LOGGER.exception(exception)
             return self.async_show_progress_done(next_step_id="could_not_register")
+
+        if existing_entry:
+            # mypy is not aware that we can't get here without having this set already
+            assert self._login is not None
+
+            self.hass.config_entries.async_update_entry(
+                existing_entry, data={CONF_ACCESS_TOKEN: self._login.access_token}
+            )
+            await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            return self.async_show_progress_done(
+                next_step_id="async_step_reauth_completed"
+            )
 
         return self.async_show_progress_done(next_step_id="repositories")
 
@@ -170,8 +201,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(
             title="",
             data={CONF_ACCESS_TOKEN: self._login.access_token},
-            options={CONF_REPOSITORIES: user_input[CONF_REPOSITORIES]},
+            options={
+                CONF_REPOSITORIES: user_input[CONF_REPOSITORIES],
+                CONF_REPO_SCOPE: self._repo_scope,
+            },
         )
+
+    async def async_step_reauth(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Perform reauth upon an API authentication error."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Dialog that informs the user that reauth is required."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                data_schema=vol.Schema({}),
+            )
+        return await self.async_step_device()
 
     async def async_step_could_not_register(
         self,
@@ -179,6 +232,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle issues that need transition await from progress step."""
         return self.async_abort(reason="could_not_register")
+
+    async def async_step_reauth_completed(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Abort with success message for reauth complete."""
+        return self.async_abort(reason="reauth_successful")
 
     @staticmethod
     @callback
@@ -222,6 +282,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_REPOSITORIES,
                             default=configured_repositories,
                         ): cv.multi_select({k: k for k in repositories}),
+                        vol.Optional(
+                            CONF_REPO_SCOPE,
+                            default=self.config_entry.options.get(
+                                CONF_REPO_SCOPE, False
+                            ),
+                        ): cv.boolean,
                     }
                 ),
             )

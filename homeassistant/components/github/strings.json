@@ -1,6 +1,12 @@
 {
   "config": {
     "step": {
+      "user": {
+        "description": "Granting full access to repositories is needed if you want to use this integration with private repositories.",
+        "data": {
+          "repo_scope": "Grant full access to repositories"
+        }
+      },
       "repositories": {
         "title": "Configure repositories",
         "data": {
@@ -13,7 +19,18 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_service%]",
-      "could_not_register": "Could not register integration with GitHub"
+      "could_not_register": "Could not register integration with GitHub",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "repositories": "[%key:component::github::config::step::repositories::data::repositories%]",
+          "repo_scope": "[%key:component::github::config::step::user::data::repo_scope%]"
+        }
+      }
     }
   }
 }

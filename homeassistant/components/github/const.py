@@ -18,6 +18,7 @@ DEFAULT_UPDATE_INTERVAL = timedelta(seconds=300)
 
 CONF_ACCESS_TOKEN = "access_token"
 CONF_REPOSITORIES = "repositories"
+CONF_REPO_SCOPE = "repo_scope"
 
 
 class IssuesPulls(NamedTuple):

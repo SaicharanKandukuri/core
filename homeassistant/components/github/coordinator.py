@@ -13,15 +13,18 @@ from aiogithubapi import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, T
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_UPDATE_INTERVAL, DOMAIN, LOGGER, IssuesPulls
+from .const import CONF_REPO_SCOPE, DEFAULT_UPDATE_INTERVAL, DOMAIN, LOGGER, IssuesPulls
 
 CoordinatorKeyType = Literal["information", "release", "issue", "commit"]
 
 
 class GitHubBaseDataUpdateCoordinator(DataUpdateCoordinator[T]):
     """Base class for GitHub data update coordinators."""
+
+    config_entry: ConfigEntry
 
     def __init__(
         self,
@@ -61,6 +64,9 @@ class RepositoryInformationDataUpdateCoordinator(
     async def fetch_data(self) -> GitHubRepositoryModel:
         """Get the latest data from GitHub."""
         result = await self._client.repos.get(self.repository)
+        scope = "repo" if self.config_entry.options.get(CONF_REPO_SCOPE, False) else ""
+        if scope != result.headers.x_oauth_scopes:
+            raise ConfigEntryAuthFailed("Invalid OAuth scopes")
         return result.data
 
 
