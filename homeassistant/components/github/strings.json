@@ -12,6 +12,10 @@
         "data": {
           "repositories": "Select repositories to track."
         }
+      },
+      "reauth_confirm": {
+        "title": "[%key:common::config_flow::title::reauth%]",
+        "description": "The GitHub integration needs to re-authenticate your account to match the selected scopes."
       }
     },
     "progress": {

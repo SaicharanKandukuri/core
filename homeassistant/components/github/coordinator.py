@@ -64,11 +64,6 @@ class GitHubBaseDataUpdateCoordinator(DataUpdateCoordinator[T]):
     async def _async_update_data(self) -> T:
         try:
             response = await self.fetch_data()
-            scope = (
-                "repo" if self.config_entry.options.get(CONF_REPO_SCOPE, False) else ""
-            )
-            if scope != response.headers.x_oauth_scopes:
-                raise ConfigEntryAuthFailed("Invalid OAuth scopes")
         except GitHubNotModifiedException:
             LOGGER.debug(
                 "Content for %s with %s not modified",
@@ -92,7 +87,11 @@ class RepositoryInformationDataUpdateCoordinator(
 
     async def fetch_data(self) -> GitHubResponseModel[GitHubRepositoryModel]:
         """Get the latest data from GitHub."""
-        return await self._client.repos.get(self.repository, **{"etag": self._etag})
+        response = await self._client.repos.get(self.repository, **{"etag": self._etag})
+        scope = "repo" if self.config_entry.options.get(CONF_REPO_SCOPE, False) else ""
+        if scope != response.headers.x_oauth_scopes:
+            raise ConfigEntryAuthFailed("Invalid OAuth scopes")
+        return response
 
 
 class RepositoryReleaseDataUpdateCoordinator(

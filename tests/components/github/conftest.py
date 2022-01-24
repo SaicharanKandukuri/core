@@ -6,6 +6,7 @@ import pytest
 
 from homeassistant.components.github.const import (
     CONF_ACCESS_TOKEN,
+    CONF_REPO_SCOPE,
     CONF_REPOSITORIES,
     DOMAIN,
 )
@@ -23,8 +24,9 @@ def mock_config_entry() -> MockConfigEntry:
     return MockConfigEntry(
         title="",
         domain=DOMAIN,
+        unique_id=DOMAIN,
         data={CONF_ACCESS_TOKEN: MOCK_ACCESS_TOKEN},
-        options={CONF_REPOSITORIES: [TEST_REPOSITORY]},
+        options={CONF_REPOSITORIES: [TEST_REPOSITORY], CONF_REPO_SCOPE: False},
     )
 
 

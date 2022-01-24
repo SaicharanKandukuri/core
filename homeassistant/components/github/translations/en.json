@@ -9,6 +9,10 @@
             "wait_for_device": "1. Open {url} \n2.Paste the following key to authorize the integration: \n```\n{code}\n```\n"
         },
         "step": {
+            "reauth_confirm": {
+                "description": "The GitHub integration needs to re-authenticate your account to match the selected scopes.",
+                "title": "Reauthenticate Integration"
+            },
             "repositories": {
                 "data": {
                     "repositories": "Select repositories to track."

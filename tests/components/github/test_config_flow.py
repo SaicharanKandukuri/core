@@ -7,6 +7,7 @@ from homeassistant import config_entries
 from homeassistant.components.github.config_flow import starred_repositories
 from homeassistant.components.github.const import (
     CONF_ACCESS_TOKEN,
+    CONF_REPO_SCOPE,
     CONF_REPOSITORIES,
     DEFAULT_REPOSITORIES,
     DOMAIN,
@@ -62,6 +63,17 @@ async def test_full_user_flow_implementation(
         context={"source": config_entries.SOURCE_USER},
     )
 
+    assert result["step_id"] == "user"
+    assert result["type"] == "form"
+    assert "flow_id" in result
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_REPO_SCOPE: False,
+        },
+    )
+
     assert result["step_id"] == "device"
     assert result["type"] == RESULT_TYPE_SHOW_PROGRESS
     assert "flow_id" in result
@@ -92,10 +104,19 @@ async def test_flow_with_registration_failure(
         "https://github.com/login/device/code",
         exc=GitHubException("Registration failed"),
     )
+
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_REPO_SCOPE: False,
+        },
+    )
+
     assert result["type"] == RESULT_TYPE_ABORT
     assert result.get("reason") == "could_not_register"
 
@@ -124,6 +145,13 @@ async def test_flow_with_activation_failure(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_REPO_SCOPE: False,
+        },
+    )
+
     assert result["step_id"] == "device"
     assert result["type"] == RESULT_TYPE_SHOW_PROGRESS
 
