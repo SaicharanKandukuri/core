@@ -109,7 +109,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         user_input: dict[str, Any] | None = None,
     ) -> FlowResult:
         """Handle device steps."""
-        if existing_entry := await self.async_set_unique_id(DOMAIN):
+        if existing_entry := self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        ):
             self._repo_scope = existing_entry.options.get(CONF_REPO_SCOPE, False)
 
         async def _wait_for_login() -> None:
