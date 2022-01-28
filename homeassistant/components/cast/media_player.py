@@ -20,7 +20,7 @@ from pychromecast.socket_client import (
 )
 import voluptuous as vol
 
-from homeassistant.components import media_source, plex, zeroconf
+from homeassistant.components import media_source, plex, spotify, zeroconf
 from homeassistant.components.http.auth import async_sign_path
 from homeassistant.components.media_player import (
     BrowseError,
@@ -477,6 +477,19 @@ class CastDevice(MediaPlayerEntity):
                 )
             )
 
+        if "spotify" in self.hass.config.components:
+            children.append(
+                BrowseMedia(
+                    title="Spotify",
+                    media_class=MEDIA_CLASS_APP,
+                    media_content_id="",
+                    media_content_type="spotify",
+                    thumbnail="https://brands.home-assistant.io/_/spotify/logo.png",
+                    can_play=False,
+                    can_expand=True,
+                )
+            )
+
         # Add local media source
         try:
             result = await media_source.async_browse_media(
@@ -526,6 +539,16 @@ class CastDevice(MediaPlayerEntity):
         if media_content_type == "plex":
             return await plex.async_browse_media(
                 self.hass, None, None, platform=CAST_DOMAIN
+            )
+
+        if spotify.is_spotify_media_type(media_content_type):
+            return await spotify.async_browse_media(
+                self.hass, media_content_type, media_content_id, can_play_artist=False
+            )
+
+        if media_content_type == "spotify":
+            return await spotify.async_browse_media(
+                self.hass, None, None, can_play_artist=False
             )
 
         return await media_source.async_browse_media(
@@ -600,6 +623,13 @@ class CastDevice(MediaPlayerEntity):
             controller = PlexController()
             self._chromecast.register_handler(controller)
             await self.hass.async_add_executor_job(controller.play_media, media)
+
+        # Handle spotify
+        elif media_id and media_id.startswith("spotify:"):
+            data = {"entity_id": self.entity_id, "uri": media_id}
+            await self.hass.services.async_call(
+                "spotcast", "start", data, blocking=False
+            )
         else:
             app_data = {"media_id": media_id, "media_type": media_type, **extra}
             await self.hass.async_add_executor_job(
