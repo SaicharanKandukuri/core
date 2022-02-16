@@ -350,7 +350,10 @@ class Integration:
                     "See https://developers.home-assistant.io/blog/2021/01/29/custom-integration-changes#versions for more details",
                     integration.domain,
                 )
-                return None
+                integration.disable(
+                    "Does not have a version defined in the manifest file"
+                )
+                return integration
             try:
                 AwesomeVersion(
                     integration.version,
@@ -370,7 +373,9 @@ class Integration:
                     integration.domain,
                     integration.version,
                 )
-                return None
+                integration.disable(
+                    f"Does not have a valid version ({integration.version})"
+                )
             return integration
 
         return None
@@ -542,6 +547,10 @@ class Integration:
             self._all_dependencies_resolved = False
 
         return self._all_dependencies_resolved
+
+    def disable(self, reason: str) -> None:
+        """Disable the integration."""
+        self.manifest["disabled"] = reason
 
     def get_component(self) -> ModuleType:
         """Return the component."""
