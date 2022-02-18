@@ -9,12 +9,12 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, __version__ as HA_VERSION
+from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_SOURCE, DEFAULT_NAME, DOMAIN
+from .const import CONF_SOURCE, DOMAIN
 from .coordinator import VersionDataUpdateCoordinator
 from .entity import VersionEntity
 
@@ -31,15 +31,12 @@ async def async_setup_entry(
     if (source := config_entry.data[CONF_SOURCE]) == "local":
         return
 
-    if (entity_name := config_entry.data[CONF_NAME]) == DEFAULT_NAME:
-        entity_name = config_entry.title
-
     entities: list[VersionBinarySensor] = [
         VersionBinarySensor(
             coordinator=coordinator,
             entity_description=BinarySensorEntityDescription(
                 key=str(source),
-                name=f"{entity_name} Update Available",
+                name=f"{source} Update Available",
                 device_class=BinarySensorDeviceClass.UPDATE,
                 entity_category=EntityCategory.DIAGNOSTIC,
             ),
