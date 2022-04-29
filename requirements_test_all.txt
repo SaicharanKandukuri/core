@@ -1682,6 +1682,7 @@ xiaomi-ble==0.9.0
 
 # homeassistant.components.knx
 xknx==0.22.1
+xknx-custom-panel==1.6.6
 
 # homeassistant.components.bluesound
 # homeassistant.components.fritz
