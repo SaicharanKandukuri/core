@@ -6,6 +6,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import wraps
+from traceback import TracebackException
 from typing import Any, cast
 
 import homeassistant.util.dt as dt_util
@@ -20,7 +21,7 @@ class TraceElement:
         """Container for trace data."""
         self._child_key: str | None = None
         self._child_run_id: str | None = None
-        self._error: Exception | None = None
+        self._error: TracebackException | None = None
         self.path: str = path
         self._result: dict[str, Any] | None = None
         self.reuse_by_child = False
@@ -48,7 +49,7 @@ class TraceElement:
 
     def set_error(self, ex: Exception) -> None:
         """Set error."""
-        self._error = ex
+        self._error = TracebackException.from_exception(ex)
 
     def set_result(self, **kwargs: Any) -> None:
         """Set result."""
@@ -72,7 +73,7 @@ class TraceElement:
         if self._variables:
             result["changed_variables"] = self._variables
         if self._error is not None:
-            result["error"] = str(self._error)
+            result["error"] = "".join(self._error.format())
         if self._result is not None:
             result["result"] = self._result
         return result
