@@ -25,7 +25,6 @@ from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_UNIQUE_ID,
-    PERCENTAGE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
@@ -378,7 +377,7 @@ class StatisticsSensor(SensorEntity):
         base_unit: str | None = new_state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
         unit: str | None
         if self.is_binary and self._state_characteristic in STAT_BINARY_PERCENTAGE:
-            unit = PERCENTAGE
+            unit = "%"
         elif not base_unit:
             unit = None
         elif self._state_characteristic in STAT_NUMERIC_RETAIN_UNIT:

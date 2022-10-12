@@ -16,7 +16,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -115,7 +114,7 @@ async def async_setup_entry(
                             name="Outdoor Humidity",
                             device_class=SensorDeviceClass.HUMIDITY,
                             state_class=SensorStateClass.MEASUREMENT,
-                            native_unit_of_measurement=PERCENTAGE,
+                            native_unit_of_measurement="%",
                             value=lambda device: device.displayedOutdoorHumidity,
                         ),
                         location,

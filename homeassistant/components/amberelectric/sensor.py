@@ -20,7 +20,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CURRENCY_DOLLAR, ENERGY_KILO_WATT_HOUR, PERCENTAGE
+from homeassistant.const import CURRENCY_DOLLAR, ENERGY_KILO_WATT_HOUR
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -247,7 +247,7 @@ async def async_setup_entry(
     renewables_description = SensorEntityDescription(
         key="renewables",
         name=f"{entry.title} - Renewables",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement="%",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
     )
