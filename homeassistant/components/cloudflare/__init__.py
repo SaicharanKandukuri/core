@@ -27,6 +27,7 @@ from homeassistant.util.location import async_detect_location_info
 from homeassistant.util.network import is_ipv4_address
 
 from .const import CONF_RECORDS, DEFAULT_UPDATE_INTERVAL, DOMAIN, SERVICE_UPDATE_RECORDS
+from .coordinator import CloudflareDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,14 +54,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def update_records(now):
         """Set up recurring update."""
         try:
-            await _async_update_cloudflare(session, cfupdate, zone_id)
+            await _async_update_cloudflare(hass, entry, session)
         except CloudflareException as error:
             _LOGGER.error("Error updating zone %s: %s", entry.data[CONF_ZONE], error)
 
     async def update_records_service(call: ServiceCall) -> None:
         """Set up service for manual trigger."""
         try:
-            await _async_update_cloudflare(session, cfupdate, zone_id)
+            await _async_update_cloudflare(hass, entry, session)
         except CloudflareException as error:
             _LOGGER.error("Error updating zone %s: %s", entry.data[CONF_ZONE], error)
 
@@ -70,7 +71,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {}
+    hass.data[DOMAIN][entry.entry_id] = CloudflareDataUpdateCoordinator(
+        hass=hass,
+        updater=cfupdate,
+        zone_id=zone_id,
+    )
 
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_RECORDS, update_records_service)
 
@@ -85,19 +90,25 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_cloudflare(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
     session: ClientSession,
-    cfupdate: CloudflareUpdater,
-    zone_id: str,
 ) -> None:
-    _LOGGER.debug("Starting update for zone %s", cfupdate.zone)
+    """Update Cloudflare DNS records."""
+    coordinator: CloudflareDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    _LOGGER.debug("Starting update for zone %s", coordinator.updater.zone)
 
-    records = await cfupdate.get_record_info(zone_id)
-    _LOGGER.debug("Records: %s", records)
+    await coordinator.async_refresh()
+    _LOGGER.debug("Records: %s", coordinator.data)
 
     location_info = await async_detect_location_info(session)
 
     if not location_info or not is_ipv4_address(location_info.ip):
         raise HomeAssistantError("Could not get external IPv4 address")
 
-    await cfupdate.update_records(zone_id, records, location_info.ip)
-    _LOGGER.debug("Update for zone %s is complete", cfupdate.zone)
+    await coordinator.updater.update_records(
+        coordinator.zone_id,
+        coordinator.data,
+        location_info.ip,
+    )
+    _LOGGER.debug("Update for zone %s is complete", coordinator.updater.zone)
