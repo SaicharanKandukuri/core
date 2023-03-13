@@ -387,6 +387,8 @@ class ShellyRpcEntity(CoordinatorEntity[ShellyRpcCoordinator]):
     @callback
     def _update_callback(self) -> None:
         """Handle device update."""
+        # We will get callbacks whenever the device updates, but we only want to
+        # update state if the status key we care about has changed.
         if self.status != self._last_status:
             self._last_status = self.status
             self.async_write_ha_state()
