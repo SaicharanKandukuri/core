@@ -368,6 +368,7 @@ class ShellyRpcEntity(CoordinatorEntity[ShellyRpcCoordinator]):
         }
         self._attr_unique_id = f"{coordinator.mac}-{key}"
         self._attr_name = get_rpc_entity_name(coordinator.device, key)
+        self._last_status: dict | None = None
 
     @property
     def available(self) -> bool:
@@ -386,7 +387,9 @@ class ShellyRpcEntity(CoordinatorEntity[ShellyRpcCoordinator]):
     @callback
     def _update_callback(self) -> None:
         """Handle device update."""
-        self.async_write_ha_state()
+        if self.status != self._last_status:
+            self._last_status = self.status
+            self.async_write_ha_state()
 
     async def call_rpc(self, method: str, params: Any) -> Any:
         """Call RPC method."""
