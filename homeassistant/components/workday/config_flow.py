@@ -159,6 +159,7 @@ class WorkdayConfigFlow(ConfigFlow, domain=DOMAIN):
         """Import a configuration from config.yaml."""
 
         abort_match = {
+            CONF_NAME: config[CONF_NAME],
             CONF_COUNTRY: config[CONF_COUNTRY],
             CONF_EXCLUDES: config[CONF_EXCLUDES],
             CONF_OFFSET: config[CONF_OFFSET],
