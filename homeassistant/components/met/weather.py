@@ -60,18 +60,15 @@ async def async_setup_entry(
     elif TYPE_CHECKING:
         assert isinstance(name, str)
 
-    entities = [MetWeather(coordinator, config_entry.data, False, name, is_metric)]
+    entities = [MetWeather(coordinator, config_entry.data, name, is_metric)]
 
-    # Add hourly entity to legacy config entries
-    if entity_registry.async_get_entity_id(
+    # Remove hourly entity from legacy config entries
+    if hourly_entity_id := entity_registry.async_get_entity_id(
         WEATHER_DOMAIN,
         DOMAIN,
         _calculate_unique_id(config_entry.data, True),
     ):
-        name = f"{name} hourly"
-        entities.append(
-            MetWeather(coordinator, config_entry.data, True, name, is_metric)
-        )
+        entity_registry.async_remove(hourly_entity_id)
 
     async_add_entities(entities)
 
@@ -115,17 +112,14 @@ class MetWeather(SingleCoordinatorWeatherEntity[MetDataUpdateCoordinator]):
         self,
         coordinator: MetDataUpdateCoordinator,
         config: MappingProxyType[str, Any],
-        hourly: bool,
         name: str,
         is_metric: bool,
     ) -> None:
         """Initialise the platform with a data instance and site."""
         super().__init__(coordinator)
-        self._attr_unique_id = _calculate_unique_id(config, hourly)
+        self._attr_unique_id = _calculate_unique_id(config, False)
         self._config = config
         self._is_metric = is_metric
-        self._hourly = hourly
-        self._attr_entity_registry_enabled_default = not hourly
         self._attr_device_info = DeviceInfo(
             name="Forecast",
             entry_type=DeviceEntryType.SERVICE,
@@ -227,7 +221,7 @@ class MetWeather(SingleCoordinatorWeatherEntity[MetDataUpdateCoordinator]):
     @property
     def forecast(self) -> list[Forecast] | None:
         """Return the forecast array."""
-        return self._forecast(self._hourly)
+        return self._forecast(False)
 
     @callback
     def _async_forecast_daily(self) -> list[Forecast] | None:
