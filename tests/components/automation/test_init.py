@@ -680,7 +680,7 @@ async def test_reload_config_handles_load_fails(hass: HomeAssistant, calls) -> N
     with patch(
         "homeassistant.config.load_yaml_config_file",
         side_effect=HomeAssistantError("bla"),
-    ):
+    ), pytest.raises(HomeAssistantError):
         await hass.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
 
     assert hass.states.get("automation.hello") is not None
