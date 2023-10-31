@@ -1,6 +1,7 @@
 """Rest API for Home Assistant."""
 import asyncio
 from asyncio import shield, timeout
+import contextlib
 from functools import lru_cache
 from http import HTTPStatus
 import logging
@@ -371,17 +372,26 @@ class APIDomainServicesView(HomeAssistantView):
 
         context = self.context(request)
 
+        service_call_task = hass.async_create_background_task(
+            hass.services.async_call(
+                domain, service, data, blocking=True, context=context
+            ),
+            f"api service call for {domain}.{service}",
+        )
         try:
             async with timeout(SERVICE_WAIT_TIMEOUT):
-                await shield(
-                    hass.services.async_call(
-                        domain, service, data, blocking=True, context=context
-                    )
-                )
+                await shield(service_call_task)
         except (vol.Invalid, ServiceNotFound) as ex:
             raise HTTPBadRequest() from ex
         except TimeoutError:
             pass
+        finally:
+            # If the service call task is still running, cancel it
+            # since it either failed or timed out.
+            if not service_call_task.done():
+                service_call_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await service_call_task
 
         changed_states = []
 

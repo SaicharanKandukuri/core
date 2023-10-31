@@ -1,4 +1,5 @@
 """The tests for the Home Assistant API component."""
+import asyncio
 from http import HTTPStatus
 import json
 from unittest.mock import patch
@@ -15,7 +16,7 @@ from homeassistant.auth.providers.legacy_api_password import (
 )
 from homeassistant.bootstrap import DATA_LOGGING
 import homeassistant.core as ha
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.setup import async_setup_component
 
 from tests.common import CLIENT_ID, MockUser, async_mock_service
@@ -356,19 +357,26 @@ async def test_api_call_service_timeout(
     hass: HomeAssistant, mock_api_client: TestClient
 ) -> None:
     """Test if the API does not fail on long running services."""
-    test_value = []
+    test_value: list[ServiceCall] = []
 
-    @ha.callback
-    def listener(service_call):
+    async def listener(service_call: ServiceCall) -> None:
         """Simulate timeout."""
-        test_value.append(1)
-        raise TimeoutError
+        test_value.append(service_call)
+        await asyncio.sleep(1000)
 
     hass.services.async_register("test_domain", "test_service", listener)
 
-    await mock_api_client.post("/api/services/test_domain/test_service")
-    await hass.async_block_till_done()
+    with patch("homeassistant.components.api.SERVICE_WAIT_TIMEOUT", 0):
+        await mock_api_client.post("/api/services/test_domain/test_service")
+        await hass.async_block_till_done()
+
     assert len(test_value) == 1
+    assert test_value[0].domain == "test_domain"
+    assert test_value[0].service == "test_service"
+
+    # The background test is cancelled at timeout
+    # or the test will fail since our test harness
+    # checks for unfinished background tasks
 
 
 async def test_api_template(hass: HomeAssistant, mock_api_client: TestClient) -> None:
