@@ -14,8 +14,8 @@ from .const import DOMAIN
 from .helpers.entity_store import EntityStoreException
 from .helpers.entity_store_schema import (
     CREATE_ENTITY_BASE_SCHEMA,
-    DELETE_ENTITY_SCHEMA,
     ENTITY_STORE_DATA_SCHEMA,
+    LOOKUP_ENTITY_SCHEMA,
     UPDATE_ENTITY_BASE_SCHEMA,
 )
 from .telegrams import TelegramDict
@@ -38,6 +38,7 @@ async def register_panel(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_create_entity)
     websocket_api.async_register_command(hass, ws_update_entity)
     websocket_api.async_register_command(hass, ws_delete_entity)
+    websocket_api.async_register_command(hass, ws_get_entity_config)
 
     if DOMAIN not in hass.data.get("frontend_panels", {}):
         hass.http.register_static_path(
@@ -237,7 +238,7 @@ async def ws_create_entity(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Handle get info command of group monitor."""
+    """Create entity in entity store and load it."""
     knx: KNXModule = hass.data[DOMAIN]
     try:
         await knx.entity_store.create_entitiy(msg["platform"], msg["data"])
@@ -267,7 +268,7 @@ async def ws_update_entity(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Handle get info command of group monitor."""
+    """Update entity in entity store and reload it."""
     knx: KNXModule = hass.data[DOMAIN]
     try:
         await knx.entity_store.update_entity(
@@ -285,7 +286,7 @@ async def ws_update_entity(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "knx/delete_entity",
-        **DELETE_ENTITY_SCHEMA,
+        **LOOKUP_ENTITY_SCHEMA,
     }
 )
 @websocket_api.async_response
@@ -294,7 +295,7 @@ async def ws_delete_entity(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Handle get info command of group monitor."""
+    """Delete entity from entity store and remove it."""
     knx: KNXModule = hass.data[DOMAIN]
     try:
         await knx.entity_store.delete_entity(msg["platform"], msg["unique_id"])
@@ -304,3 +305,28 @@ async def ws_delete_entity(
         )
         return
     connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "knx/get_entity_config",
+        **LOOKUP_ENTITY_SCHEMA,
+    }
+)
+@callback
+def ws_get_entity_config(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Get entity configuration from entity store."""
+    knx: KNXModule = hass.data[DOMAIN]
+    try:
+        config = knx.entity_store.data[msg["platform"]][msg["unique_id"]]
+    except KeyError:
+        connection.send_error(
+            msg["id"], websocket_api.const.ERR_HOME_ASSISTANT_ERROR, "Entity not found."
+        )
+        return
+    connection.send_result(msg["id"], config)
