@@ -9,9 +9,11 @@ import voluptuous as vol
 import wakeonlan
 
 from homeassistant.components.switch import (
+    DOMAIN as SWITCH_DOMAIN,
     PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     SwitchEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_BROADCAST_ADDRESS,
     CONF_BROADCAST_PORT,
@@ -54,27 +56,40 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up a wake on lan switch."""
-    broadcast_address: str | None = config.get(CONF_BROADCAST_ADDRESS)
-    broadcast_port: int | None = config.get(CONF_BROADCAST_PORT)
-    host: str | None = config.get(CONF_HOST)
-    mac_address: str = config[CONF_MAC]
-    name: str = config[CONF_NAME]
-    off_action: list[Any] | None = config.get(CONF_OFF_ACTION)
 
-    add_entities(
-        [
-            WolSwitch(
-                hass,
-                name,
-                host,
-                mac_address,
-                off_action,
-                broadcast_address,
-                broadcast_port,
-            )
-        ],
-        host is not None,
-    )
+    # Import is done from __init__.py
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up Wake on Lan Switch platform."""
+    entries: list[dict[str, Any]] | None = entry.options.get(SWITCH_DOMAIN)
+    if not entries:
+        return
+
+    for entity in entries:
+        broadcast_address: str | None = entity.get(CONF_BROADCAST_ADDRESS)
+        broadcast_port: int | None = entity.get(CONF_BROADCAST_PORT)
+        host: str | None = entity.get(CONF_HOST)
+        mac_address: str = entity[CONF_MAC]
+        name: str = entity[CONF_NAME]
+        off_action: list[Any] | None = entity.get(CONF_OFF_ACTION)
+
+        async_add_entities(
+            [
+                WolSwitch(
+                    hass,
+                    name,
+                    host,
+                    mac_address,
+                    off_action,
+                    broadcast_address,
+                    broadcast_port,
+                )
+            ],
+            host is not None,
+        )
 
 
 class WolSwitch(SwitchEntity):

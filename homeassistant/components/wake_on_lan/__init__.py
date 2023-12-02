@@ -5,12 +5,13 @@ import logging
 import voluptuous as vol
 import wakeonlan
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_BROADCAST_ADDRESS, CONF_BROADCAST_PORT, CONF_MAC
 from homeassistant.core import HomeAssistant, ServiceCall
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +30,14 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the wake on LAN component."""
+
+    # Add import
+
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Wake on Lan from a config entry."""
 
     async def send_magic_packet(call: ServiceCall) -> None:
         """Send magic packet to wake up a device."""
@@ -60,4 +69,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         schema=WAKE_ON_LAN_SEND_MAGIC_PACKET_SCHEMA,
     )
 
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload Wake on Lan config entry."""
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
