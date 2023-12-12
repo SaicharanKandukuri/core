@@ -1,22 +1,23 @@
 """Component for monitoring activity on a folder."""
 import logging
 import os
+from typing import Any
 
 import voluptuous as vol
-from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import FileSystemMovedEvent, PatternMatchingEventHandler
 from watchdog.observers import Observer
 
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.typing import ConfigType
+
+from .const import CONF_FOLDER, CONF_PATTERNS, DEFAULT_PATTERN, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_FOLDER = "folder"
-CONF_PATTERNS = "patterns"
-DEFAULT_PATTERN = "*"
-DOMAIN = "folder_watcher"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -38,32 +39,58 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the folder watcher."""
-    conf = config[DOMAIN]
-    for watcher in conf:
-        path = watcher[CONF_FOLDER]
-        patterns = watcher[CONF_PATTERNS]
-        if not hass.config.is_allowed_path(path):
-            _LOGGER.error("Folder %s is not valid or allowed", path)
-            return False
-        Watcher(path, patterns, hass)
+    if DOMAIN in config:
+        conf: list[dict[str, Any]] = config[DOMAIN]
+        for watcher in conf:
+            path: str = watcher[CONF_FOLDER]
+            if not hass.config.is_allowed_path(path):
+                async_create_issue(
+                    hass,
+                    DOMAIN,
+                    f"not_allowed_path_{path}",
+                    breaks_in_ha_version="2024.7.0",
+                    is_fixable=False,
+                    is_persistent=False,
+                    severity=IssueSeverity.WARNING,
+                    translation_key="not_allowed_path",
+                    translation_placeholders={"path": path},
+                )
+                continue
+            hass.async_create_task(
+                hass.config_entries.flow.async_init(
+                    DOMAIN, context={"source": SOURCE_IMPORT}, data=watcher
+                )
+            )
 
     return True
 
 
-def create_event_handler(patterns, hass):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up System Monitor from a config entry."""
+
+    path: str = entry.options[CONF_FOLDER]
+    patterns: list[str] = entry.options[CONF_PATTERNS]
+    if not hass.config.is_allowed_path(path):
+        _LOGGER.error("Folder %s is not valid or allowed", path)
+        return False
+    Watcher(path, patterns, hass)
+    return True
+
+
+def create_event_handler(patterns: list[str], hass: HomeAssistant):
     """Return the Watchdog EventHandler object."""
 
     class EventHandler(PatternMatchingEventHandler):
         """Class for handling Watcher events."""
 
-        def __init__(self, patterns, hass):
+        def __init__(self, patterns: list[str], hass: HomeAssistant) -> None:
             """Initialise the EventHandler."""
             super().__init__(patterns)
             self.hass = hass
 
-        def process(self, event, moved=False):
+        def process(self, event: FileSystemMovedEvent, moved: bool = False) -> None:
             """On Watcher event, fire HA event."""
             _LOGGER.debug("process(%s)", event)
             if not event.is_directory:
@@ -89,23 +116,23 @@ def create_event_handler(patterns, hass):
                     fireable,
                 )
 
-        def on_modified(self, event):
+        def on_modified(self, event: FileSystemMovedEvent) -> None:
             """File modified."""
             self.process(event)
 
-        def on_moved(self, event):
+        def on_moved(self, event: FileSystemMovedEvent) -> None:
             """File moved."""
             self.process(event, moved=True)
 
-        def on_created(self, event):
+        def on_created(self, event: FileSystemMovedEvent) -> None:
             """File created."""
             self.process(event)
 
-        def on_deleted(self, event):
+        def on_deleted(self, event: FileSystemMovedEvent) -> None:
             """File deleted."""
             self.process(event)
 
-        def on_closed(self, event):
+        def on_closed(self, event: FileSystemMovedEvent) -> None:
             """File closed."""
             self.process(event)
 
@@ -115,20 +142,29 @@ def create_event_handler(patterns, hass):
 class Watcher:
     """Class for starting Watchdog."""
 
-    def __init__(self, path, patterns, hass):
+    def __init__(self, path: str, patterns: list[str], hass: HomeAssistant) -> None:
         """Initialise the watchdog observer."""
+        self.hass = hass
         self._observer = Observer()
         self._observer.schedule(
             create_event_handler(patterns, hass), path, recursive=True
         )
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.startup)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.shutdown)
+        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.async_startup)
+        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.async_shutdown)
 
-    def startup(self, event):
+    async def async_startup(self, event: Event) -> None:
+        """Start the watcher."""
+        self.hass.async_add_executor_job(self.startup)
+
+    async def async_shutdown(self, event: Event) -> None:
+        """Shutdown the watcher."""
+        self.hass.async_add_executor_job(self.shutdown)
+
+    def startup(self, event: Event) -> None:
         """Start the watcher."""
         self._observer.start()
 
-    def shutdown(self, event):
+    def shutdown(self, event: Event) -> None:
         """Shutdown the watcher."""
         self._observer.stop()
         self._observer.join()
