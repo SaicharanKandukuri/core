@@ -12,8 +12,8 @@ from ..schema import ga_list_validator, ga_list_validator_optional, sync_state_v
 
 BASE_ENTITY_SCHEMA = vol.Schema(
     {
-        vol.Required("name"): str,
-        vol.Optional("device_id", default=None): vol.Maybe(str),
+        vol.Optional("name", default=None): vol.Maybe(str),
+        vol.Optional("device_info", default=None): vol.Maybe(str),
         vol.Optional("entity_category", default=None): vol.Any(
             ENTITY_CATEGORIES_SCHEMA, vol.SetTo(None)
         ),

@@ -9,6 +9,9 @@ from xknxproject.exceptions import XknxProjectException
 
 from homeassistant.components import panel_custom, websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.typing import UNDEFINED
+from homeassistant.util.uuid import random_uuid_hex
 
 from .const import DOMAIN
 from .helpers.entity_store import EntityStoreException
@@ -39,6 +42,7 @@ async def register_panel(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_delete_entity)
     websocket_api.async_register_command(hass, ws_get_entity_config)
     websocket_api.async_register_command(hass, ws_get_entity_entries)
+    websocket_api.async_register_command(hass, ws_create_device)
 
     if DOMAIN not in hass.data.get("frontend_panels", {}):
         hass.http.register_static_path(
@@ -350,3 +354,35 @@ def ws_get_entity_config(
         )
         return
     connection.send_result(msg["id"], config)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "knx/create_device",
+        vol.Required("name"): str,
+        vol.Optional("area_id"): str,
+    }
+)
+@callback
+def ws_create_device(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Create a new KNX device."""
+    knx: KNXModule = hass.data[DOMAIN]
+    identifier = f"knx_vdev_{random_uuid_hex()}"
+    device_registry = dr.async_get(hass)
+    _device = device_registry.async_get_or_create(
+        config_entry_id=knx.entry.entry_id,
+        manufacturer="KNX",
+        name=msg["name"],
+        identifiers={(DOMAIN, identifier)},
+    )
+    device_registry.async_update_device(
+        _device.id,
+        area_id=msg.get("area_id") or UNDEFINED,
+        configuration_url=f"homeassistant://knx/entities/view?device_id={_device.id}",
+    )
+    connection.send_result(msg["id"], _device.dict_repr)
