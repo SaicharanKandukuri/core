@@ -563,4 +563,6 @@ def entry_json(entry: config_entries.ConfigEntry) -> dict[str, Any]:
         "pref_disable_polling": entry.pref_disable_polling,
         "disabled_by": entry.disabled_by,
         "reason": entry.reason,
+        "reason_translation_key": entry.reason_translation_key,
+        "reason_translation_placeholders": entry.reason_translation_placeholders,
     }
