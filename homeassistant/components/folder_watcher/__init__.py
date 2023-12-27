@@ -68,7 +68,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up System Monitor from a config entry."""
+    """Set up Folder watcher from a config entry."""
 
     path: str = entry.options[CONF_FOLDER]
     patterns: list[str] = entry.options[CONF_PATTERNS]
