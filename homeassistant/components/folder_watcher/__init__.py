@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.config.is_allowed_path(path):
         _LOGGER.error("Folder %s is not valid or allowed", path)
         return False
-    Watcher(path, patterns, hass)
+    await hass.async_add_executor_job(Watcher, path, patterns, hass)
     return True
 
 
@@ -149,16 +149,8 @@ class Watcher:
         self._observer.schedule(
             create_event_handler(patterns, hass), path, recursive=True
         )
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.async_startup)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.async_shutdown)
-
-    async def async_startup(self, event: Event) -> None:
-        """Start the watcher."""
-        self.hass.async_add_executor_job(self.startup)
-
-    async def async_shutdown(self, event: Event) -> None:
-        """Shutdown the watcher."""
-        self.hass.async_add_executor_job(self.shutdown)
+        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.startup)
+        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.shutdown)
 
     def startup(self, event: Event) -> None:
         """Start the watcher."""
