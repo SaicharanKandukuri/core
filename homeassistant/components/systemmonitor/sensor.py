@@ -12,6 +12,8 @@ import sys
 from typing import Any
 
 import psutil
+from psutil._common import sdiskusage, shwtemp, snetio, snicaddr, sswap
+from psutil._pslinux import svmem
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
@@ -45,7 +47,7 @@ from homeassistant.helpers.dispatcher import (
 from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
@@ -338,8 +340,8 @@ class SensorData:
     """Data for a sensor."""
 
     argument: Any
-    state: str | datetime | None
-    value: Any | None
+    state: StateType | datetime
+    value: int | None
     update_time: datetime | None
     last_exception: BaseException | None
 
@@ -563,7 +565,7 @@ class SystemMonitorSensor(SensorEntity):
         )
 
     @property
-    def native_value(self) -> str | datetime | None:
+    def native_value(self) -> StateType | datetime:
         """Return the state of the device."""
         return self.data.state
 
@@ -589,11 +591,11 @@ class SystemMonitorSensor(SensorEntity):
 
 def _update(  # noqa: C901
     type_: str, data: SensorData
-) -> tuple[str | datetime | None, str | None, datetime | None]:
+) -> tuple[StateType | datetime, int | None, datetime | None]:
     """Get the latest system information."""
-    state = None
-    value = None
-    update_time = None
+    state: StateType | datetime = None
+    value: int | None = None
+    update_time: datetime | None = None
 
     if type_ == "disk_use_percent":
         state = _disk_usage(data.argument).percent
@@ -687,27 +689,27 @@ def _update(  # noqa: C901
 
 
 @cache
-def _disk_usage(path: str) -> Any:
+def _disk_usage(path: str) -> sdiskusage:
     return psutil.disk_usage(path)
 
 
 @cache
-def _swap_memory() -> Any:
+def _swap_memory() -> sswap:
     return psutil.swap_memory()
 
 
 @cache
-def _virtual_memory() -> Any:
+def _virtual_memory() -> svmem:
     return psutil.virtual_memory()
 
 
 @cache
-def _net_io_counters() -> Any:
+def _net_io_counters() -> dict[str, snetio]:
     return psutil.net_io_counters(pernic=True)
 
 
 @cache
-def _net_if_addrs() -> Any:
+def _net_if_addrs() -> dict[str, list[snicaddr]]:
     return psutil.net_if_addrs()
 
 
@@ -719,6 +721,7 @@ def _getloadavg() -> tuple[float, float, float]:
 def _read_cpu_temperature() -> float | None:
     """Attempt to read CPU / processor temperature."""
     temps = psutil.sensors_temperatures()
+    entry: shwtemp
 
     for name, entries in temps.items():
         for i, entry in enumerate(entries, start=1):
