@@ -33,8 +33,10 @@ from homeassistant.helpers.deprecation import (
 )
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.temperature import display_temp as show_temp
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_issue_tracker
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (  # noqa: F401
@@ -698,6 +700,27 @@ async def async_service_aux_heat(
     entity: ClimateEntity, service_call: ServiceCall
 ) -> None:
     """Handle aux heat service."""
+    translation_placeholders = {"platform": entity.platform.platform_name}
+    translation_key = "deprecated_climate_aux_heat_no_url"
+    issue_tracker = async_get_issue_tracker(
+        entity.hass,
+        integration_domain=entity.platform.platform_name,
+        module=type(entity).__module__,
+    )
+    if issue_tracker:
+        translation_placeholders["issue_tracker"] = issue_tracker
+        translation_key = "deprecated_climate_aux_heat_url"
+    async_create_issue(
+        entity.hass,
+        DOMAIN,
+        issue_id="deprecated_climate_aux_heat",
+        breaks_in_ha_version="2023.8.0",
+        is_fixable=False,
+        is_persistent=False,
+        severity=IssueSeverity.WARNING,
+        translation_key=translation_key,
+        translation_placeholders=translation_placeholders,
+    )
     if service_call.data[ATTR_AUX_HEAT]:
         await entity.async_turn_aux_heat_on()
     else:

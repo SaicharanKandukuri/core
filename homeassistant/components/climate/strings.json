@@ -234,6 +234,16 @@
       }
     }
   },
+  "issues": {
+    "deprecated_climate_aux_heat_url": {
+      "title": "The {platform} integration is using deprecated auxiliary heater service",
+      "description": "The integration `{platform}` implements the deprecated `aux_heat` service in the ClimateEntity.\n\nPlease create a bug report at {issue_tracker}.\n\nOnce an updated version of `{platform}` is available, install it and restart Home Assistant to fix this issue."
+    },
+    "deprecated_climate_aux_heat_no_url": {
+      "title": "[%key:component::climate::issues::deprecated_climate_aux_heat_url::title%]",
+      "description": "The custom integration `{platform}` implements the `forecast` property or sets `self._attr_forecast` in a subclass of WeatherEntity.\n\nPlease report it to the author of the {platform} integration.\n\nOnce an updated version of `{platform}` is available, install it and restart Home Assistant to fix this issue."
+    }
+  },
   "exceptions": {
     "not_valid_preset_mode": {
       "message": "Preset mode {mode} is not valid. Valid preset modes are: {modes}."
