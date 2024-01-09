@@ -32,7 +32,6 @@ from homeassistant.data_entry_flow import (
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from . import disconnect_client
 from .addon import get_addon_manager
 from .const import (
     ADDON_SLUG,
@@ -828,7 +827,7 @@ class OptionsFlowHandler(BaseZwaveJSFlow, config_entries.OptionsFlow):
                 and self.config_entry.state == config_entries.ConfigEntryState.LOADED
             ):
                 # Disconnect integration before restarting add-on.
-                await disconnect_client(self.hass, self.config_entry)
+                await self.hass.config_entries.async_unload(self.config_entry.entry_id)
 
             return await self.async_step_start_addon()
 
