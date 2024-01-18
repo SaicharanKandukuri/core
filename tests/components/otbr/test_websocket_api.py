@@ -49,13 +49,15 @@ async def test_get_info(
         msg = await websocket_client.receive_json()
 
     assert msg["success"]
-    assert msg["result"] == {
-        "url": BASE_URL,
-        "active_dataset_tlvs": DATASET_CH16.hex().lower(),
-        "channel": 16,
-        "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
-        "extended_address": TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
-    }
+    assert msg["result"] == [
+        {
+            "url": BASE_URL,
+            "active_dataset_tlvs": DATASET_CH16.hex().lower(),
+            "channel": 16,
+            "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            "extended_address": TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
+        }
+    ]
 
 
 async def test_get_info_no_entry(
@@ -110,12 +112,19 @@ async def test_create_network(
     ) as set_enabled_mock, patch(
         "python_otbr_api.OTBR.get_active_dataset_tlvs", return_value=DATASET_CH16
     ) as get_active_dataset_tlvs_mock, patch(
+        "python_otbr_api.OTBR.get_border_agent_id", return_value=TEST_BORDER_AGENT_ID
+    ), patch(
         "homeassistant.components.thread.dataset_store.DatasetStore.async_add"
     ) as mock_add, patch(
         "homeassistant.components.otbr.util.random.randint",
         return_value=0x1234,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
 
         msg = await websocket_client.receive_json()
         assert msg["success"]
@@ -142,7 +151,9 @@ async def test_create_network_no_entry(
     """Test create network."""
     await async_setup_component(hass, "otbr", {})
     websocket_client = await hass_ws_client(hass)
-    await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+    await websocket_client.send_json_auto_id(
+        {"type": "otbr/create_network", "border_agent_id": "blah"}
+    )
 
     msg = await websocket_client.receive_json()
     assert not msg["success"]
@@ -159,8 +170,16 @@ async def test_create_network_fails_1(
     with patch(
         "python_otbr_api.OTBR.set_enabled",
         side_effect=python_otbr_api.OTBRError,
+    ), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -179,8 +198,16 @@ async def test_create_network_fails_2(
     ), patch(
         "python_otbr_api.OTBR.create_active_dataset",
         side_effect=python_otbr_api.OTBRError,
-    ), patch("python_otbr_api.OTBR.factory_reset"):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+    ), patch("python_otbr_api.OTBR.factory_reset"), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ):
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -201,8 +228,16 @@ async def test_create_network_fails_3(
         "python_otbr_api.OTBR.create_active_dataset",
     ), patch(
         "python_otbr_api.OTBR.factory_reset",
+    ), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -223,8 +258,16 @@ async def test_create_network_fails_4(
         side_effect=python_otbr_api.OTBRError,
     ), patch(
         "python_otbr_api.OTBR.factory_reset",
+    ), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -242,8 +285,16 @@ async def test_create_network_fails_5(
         "python_otbr_api.OTBR.create_active_dataset"
     ), patch("python_otbr_api.OTBR.get_active_dataset_tlvs", return_value=None), patch(
         "python_otbr_api.OTBR.factory_reset"
+    ), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -262,8 +313,16 @@ async def test_create_network_fails_6(
     ), patch("python_otbr_api.OTBR.get_active_dataset_tlvs", return_value=None), patch(
         "python_otbr_api.OTBR.factory_reset",
         side_effect=python_otbr_api.OTBRError,
+    ), patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
     ):
-        await websocket_client.send_json_auto_id({"type": "otbr/create_network"})
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/create_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            }
+        )
         msg = await websocket_client.receive_json()
 
     assert not msg["success"]
@@ -283,6 +342,9 @@ async def test_set_network(
     dataset_id = list(dataset_store.datasets)[1]
 
     with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch(
         "python_otbr_api.OTBR.set_active_dataset_tlvs"
     ) as set_active_dataset_tlvs_mock, patch(
         "python_otbr_api.OTBR.set_enabled"
@@ -290,6 +352,7 @@ async def test_set_network(
         await websocket_client.send_json_auto_id(
             {
                 "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
                 "dataset_id": dataset_id,
             }
         )
@@ -315,6 +378,7 @@ async def test_set_network_no_entry(
     await websocket_client.send_json_auto_id(
         {
             "type": "otbr/set_network",
+            "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
             "dataset_id": "abc",
         }
     )
@@ -338,14 +402,19 @@ async def test_set_network_channel_conflict(
 
     multiprotocol_addon_manager_mock.async_get_channel.return_value = 15
 
-    await websocket_client.send_json_auto_id(
-        {
-            "type": "otbr/set_network",
-            "dataset_id": dataset_id,
-        }
-    )
+    with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ):
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+                "dataset_id": dataset_id,
+            }
+        )
 
-    msg = await websocket_client.receive_json()
+        msg = await websocket_client.receive_json()
 
     assert not msg["success"]
     assert msg["error"]["code"] == "channel_conflict"
@@ -359,14 +428,19 @@ async def test_set_network_unknown_dataset(
 ) -> None:
     """Test set network."""
 
-    await websocket_client.send_json_auto_id(
-        {
-            "type": "otbr/set_network",
-            "dataset_id": "abc",
-        }
-    )
+    with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ):
+        await websocket_client.send_json_auto_id(
+            {
+                "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+                "dataset_id": "abc",
+            }
+        )
 
-    msg = await websocket_client.receive_json()
+        msg = await websocket_client.receive_json()
 
     assert not msg["success"]
     assert msg["error"]["code"] == "unknown_dataset"
@@ -384,12 +458,16 @@ async def test_set_network_fails_1(
     dataset_id = list(dataset_store.datasets)[1]
 
     with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch(
         "python_otbr_api.OTBR.set_enabled",
         side_effect=python_otbr_api.OTBRError,
     ):
         await websocket_client.send_json_auto_id(
             {
                 "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
                 "dataset_id": dataset_id,
             }
         )
@@ -411,6 +489,9 @@ async def test_set_network_fails_2(
     dataset_id = list(dataset_store.datasets)[1]
 
     with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch(
         "python_otbr_api.OTBR.set_enabled",
     ), patch(
         "python_otbr_api.OTBR.set_active_dataset_tlvs",
@@ -419,6 +500,7 @@ async def test_set_network_fails_2(
         await websocket_client.send_json_auto_id(
             {
                 "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
                 "dataset_id": dataset_id,
             }
         )
@@ -440,6 +522,9 @@ async def test_set_network_fails_3(
     dataset_id = list(dataset_store.datasets)[1]
 
     with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch(
         "python_otbr_api.OTBR.set_enabled",
         side_effect=[None, python_otbr_api.OTBRError],
     ), patch(
@@ -448,6 +533,7 @@ async def test_set_network_fails_3(
         await websocket_client.send_json_auto_id(
             {
                 "type": "otbr/set_network",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
                 "dataset_id": dataset_id,
             }
         )
@@ -465,9 +551,16 @@ async def test_set_channel(
 ) -> None:
     """Test set channel."""
 
-    with patch("python_otbr_api.OTBR.set_channel"):
+    with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch("python_otbr_api.OTBR.set_channel"):
         await websocket_client.send_json_auto_id(
-            {"type": "otbr/set_channel", "channel": 12}
+            {
+                "type": "otbr/set_channel",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+                "channel": 12,
+            }
         )
         msg = await websocket_client.receive_json()
 
@@ -483,9 +576,16 @@ async def test_set_channel_multiprotocol(
 ) -> None:
     """Test set channel."""
 
-    with patch("python_otbr_api.OTBR.set_channel"):
+    with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch("python_otbr_api.OTBR.set_channel"):
         await websocket_client.send_json_auto_id(
-            {"type": "otbr/set_channel", "channel": 12}
+            {
+                "type": "otbr/set_channel",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+                "channel": 12,
+            }
         )
         msg = await websocket_client.receive_json()
 
@@ -502,7 +602,11 @@ async def test_set_channel_no_entry(
     await async_setup_component(hass, "otbr", {})
     websocket_client = await hass_ws_client(hass)
     await websocket_client.send_json_auto_id(
-        {"type": "otbr/set_channel", "channel": 12}
+        {
+            "type": "otbr/set_channel",
+            "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+            "channel": 12,
+        }
     )
 
     msg = await websocket_client.receive_json()
@@ -518,11 +622,18 @@ async def test_set_channel_fails(
 ) -> None:
     """Test set channel."""
     with patch(
+        "python_otbr_api.OTBR.get_border_agent_id",
+        return_value=TEST_BORDER_AGENT_ID,
+    ), patch(
         "python_otbr_api.OTBR.set_channel",
         side_effect=python_otbr_api.OTBRError,
     ):
         await websocket_client.send_json_auto_id(
-            {"type": "otbr/set_channel", "channel": 12}
+            {
+                "type": "otbr/set_channel",
+                "border_agent_id": TEST_BORDER_AGENT_ID.hex(),
+                "channel": 12,
+            }
         )
         msg = await websocket_client.receive_json()
 
