@@ -559,6 +559,7 @@ def entry_json(entry: config_entries.ConfigEntry) -> dict[str, Any]:
         "supports_options": entry.supports_options,
         "supports_remove_device": entry.supports_remove_device or False,
         "supports_unload": entry.supports_unload or False,
+        "supports_reconfigure": entry.supports_reconfigure or False,
         "pref_disable_new_entities": entry.pref_disable_new_entities,
         "pref_disable_polling": entry.pref_disable_polling,
         "disabled_by": entry.disabled_by,
