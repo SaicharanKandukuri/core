@@ -8,7 +8,7 @@ import pytest
 
 from homeassistant.bootstrap import async_setup_component
 from homeassistant.components import config
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import yaml
@@ -80,10 +80,8 @@ async def test_update_automation_config(
     )
     await hass.async_block_till_done()
     assert sorted(hass.states.async_entity_ids("automation")) == [
-        "automation.automation_0",
         "automation.automation_1",
     ]
-    assert hass.states.get("automation.automation_0").state == STATE_UNAVAILABLE
     assert hass.states.get("automation.automation_1").state == STATE_ON
 
     assert resp.status == HTTPStatus.OK
@@ -258,10 +256,8 @@ async def test_update_remove_key_automation_config(
     )
     await hass.async_block_till_done()
     assert sorted(hass.states.async_entity_ids("automation")) == [
-        "automation.automation_0",
         "automation.automation_1",
     ]
-    assert hass.states.get("automation.automation_0").state == STATE_UNAVAILABLE
     assert hass.states.get("automation.automation_1").state == STATE_ON
 
     assert resp.status == HTTPStatus.OK
@@ -303,10 +299,8 @@ async def test_bad_formatted_automations(
     )
     await hass.async_block_till_done()
     assert sorted(hass.states.async_entity_ids("automation")) == [
-        "automation.automation_0",
         "automation.automation_1",
     ]
-    assert hass.states.get("automation.automation_0").state == STATE_UNAVAILABLE
     assert hass.states.get("automation.automation_1").state == STATE_ON
 
     assert resp.status == HTTPStatus.OK
