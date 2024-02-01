@@ -1,4 +1,4 @@
-"""Device configuration for MQTT platforms."""
+"""Schemas for MQTT discovery."""
 
 from __future__ import annotations
 
