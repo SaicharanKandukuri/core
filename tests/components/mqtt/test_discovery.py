@@ -466,23 +466,27 @@ async def test_discovery_component_availability_overridden(
 
 
 @pytest.mark.parametrize(
-    ("discovery_topic", "config_message"),
+    ("discovery_topic", "config_message", "error_message"),
     [
         (
             "homeassistant/binary_sensor/bla/config",
             '{ "name": "Beer", "state_topic": "test-topic", "o": "bla2mqtt" }',
+            "Unable to parse origin information from discovery message",
         ),
         (
             "homeassistant/binary_sensor/bla/config",
             '{ "name": "Beer", "state_topic": "test-topic", "o": 2.0 }',
+            "Unable to parse origin information from discovery message",
         ),
         (
             "homeassistant/binary_sensor/bla/config",
             '{ "name": "Beer", "state_topic": "test-topic", "o": null }',
+            "Unable to parse origin information from discovery message",
         ),
         (
             "homeassistant/binary_sensor/bla/config",
             '{ "name": "Beer", "state_topic": "test-topic", "o": {"sw": "bla2mqtt"} }',
+            "Unable to parse origin information from discovery message",
         ),
         (
             "homeassistant/device/bla/config",
@@ -490,6 +494,8 @@ async def test_discovery_component_availability_overridden(
             '{"platform":"binary_sensor","name":"Beer","state_topic":"test-topic"}'
             '},"o": "bla2mqtt"'
             "}",
+            "Invalid MQTT device discovery payload for bla, "
+            "expected a dictionary for dictionary value @ data['origin']",
         ),
         (
             "homeassistant/device/bla/config",
@@ -497,6 +503,8 @@ async def test_discovery_component_availability_overridden(
             '{"platform":"binary_sensor","name":"Beer","state_topic":"test-topic"}'
             '},"o": 2.0'
             "}",
+            "Invalid MQTT device discovery payload for bla, "
+            "expected a dictionary for dictionary value @ data['origin']",
         ),
         (
             "homeassistant/device/bla/config",
@@ -504,6 +512,8 @@ async def test_discovery_component_availability_overridden(
             '{"platform":"binary_sensor","name":"Beer","state_topic":"test-topic"}'
             '},"o": null'
             "}",
+            "Invalid MQTT device discovery payload for bla, "
+            "expected a dictionary for dictionary value @ data['origin']",
         ),
         (
             "homeassistant/device/bla/config",
@@ -511,6 +521,8 @@ async def test_discovery_component_availability_overridden(
             '{"platform":"binary_sensor","name":"Beer","state_topic":"test-topic"}'
             '},"o": {"sw": "bla2mqtt"}'
             "}",
+            "Invalid MQTT device discovery payload for bla, "
+            "required key not provided @ data['origin']['name']",
         ),
     ],
 )
@@ -521,6 +533,7 @@ async def test_discovery_with_invalid_integration_info(
     caplog: pytest.LogCaptureFixture,
     discovery_topic: str,
     config_message: str,
+    error_message: str,
 ) -> None:
     """Test sending in correct JSON."""
     await mqtt_mock_entry()
@@ -534,7 +547,7 @@ async def test_discovery_with_invalid_integration_info(
     state = hass.states.get("binary_sensor.beer")
 
     assert state is None
-    assert "Unable to parse origin information from discovery message" in caplog.text
+    assert error_message in caplog.text
 
 
 @patch("homeassistant.components.mqtt.PLATFORMS", [Platform.FAN])
