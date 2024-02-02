@@ -1100,6 +1100,7 @@ async def test_duplicate_removal(
         (
             "homeassistant/device/bla/config",
             '{ "device":{"identifiers":["0AFFD2"]},'
+            '  "o": {"name": "foobar"},'
             '  "cmp": {"sens1": {'
             '  "platform": "sensor",'
             '  "name": "sensor1",'
@@ -1188,6 +1189,7 @@ async def test_cleanup_device(
         (
             "homeassistant/device/bla/config",
             '{ "device":{"identifiers":["0AFFD2"]},'
+            '  "o": {"name": "foobar"},'
             '  "cmp": {"sens1": {'
             '  "platform": "sensor",'
             '  "name": "sensor1",'
@@ -1296,6 +1298,7 @@ async def test_cleanup_device_mqtt_device_discovery(
     discovery_topic = "homeassistant/device/bla/config"
     discovery_payload = (
         '{ "device":{"identifiers":["0AFFD2"]},'
+        '  "o": {"name": "foobar"},'
         '  "cmp": {"sens1": {'
         '  "platform": "sensor",'
         '  "name": "sensor1",'
@@ -1325,6 +1328,7 @@ async def test_cleanup_device_mqtt_device_discovery(
     # Do update and remove sensor 2 from device
     discovery_payload_update1 = (
         '{ "device":{"identifiers":["0AFFD2"]},'
+        '  "o": {"name": "foobar"},'
         '  "cmp": {"sens1": {'
         '  "platform": "sensor",'
         '  "name": "sensor1",'
@@ -1352,6 +1356,7 @@ async def test_cleanup_device_mqtt_device_discovery(
     # Removing last sensor
     discovery_payload_update2 = (
         '{ "device":{"identifiers":["0AFFD2"]},'
+        '  "o": {"name": "foobar"},'
         '  "cmp": {"sens1": {'
         '  "platform": "sensor"'
         ' },"sens2": {'
@@ -2269,6 +2274,7 @@ async def test_update_with_bad_config_not_breaks_discovery(
         (
             "homeassistant/device/bla/config",
             '{ "device":{"identifiers":["0AFFD2"]},'
+            '  "o": {"name": "foobar"},'
             '  "state_topic": "foobar/sensor-shared",'
             '  "cmp": {"sens1": {'
             '  "platform": "sensor",'
