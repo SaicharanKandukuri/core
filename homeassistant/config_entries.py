@@ -1136,13 +1136,16 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
 
     def __setitem__(self, entry_id: str, entry: ConfigEntry) -> None:
         """Add an item."""
-        data = self.data
-        if entry_id in data:
+        if entry_id in self.data:
             # This is likely a bug in a test that is adding the same entry twice.
             # In the future, once we have fixed the tests, this will raise HomeAssistantError.
             _LOGGER.error("An entry with the id %s already exists", entry_id)
             self._unindex_entry(entry_id)
-        data[entry_id] = entry
+        self._index_entry(entry_id, entry)
+
+    def _index_entry(self, entry_id: str, entry: ConfigEntry) -> None:
+        """Index an entry."""
+        self.data[entry_id] = entry
         self._domain_index.setdefault(entry.domain, []).append(entry)
         if entry.unique_id is not None:
             self._domain_unique_id_index.setdefault(entry.domain, {})[
@@ -1165,6 +1168,15 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
         """Remove an item."""
         self._unindex_entry(entry_id)
         super().__delitem__(entry_id)
+
+    def update_unique_id(self, entry: ConfigEntry, new_unique_id: str | None) -> None:
+        """Update unique id for an entry.
+
+        This method mutates the entry with the new unique id and updates the indexes.
+        """
+        self._unindex_entry(entry.entry_id)
+        entry.unique_id = new_unique_id
+        self._index_entry(entry.entry_id, entry)
 
     def get_entries_for_domain(self, domain: str) -> list[ConfigEntry]:
         """Get entries for a domain."""
@@ -1487,10 +1499,7 @@ class ConfigEntries:
 
         if unique_id is not UNDEFINED and entry.unique_id != unique_id:
             # Reindex the entry if the unique_id has changed
-            entry_id = entry.entry_id
-            del self._entries[entry_id]
-            entry.unique_id = unique_id
-            self._entries[entry_id] = entry
+            self._entries.update_unique_id(entry, unique_id)
             changed = True
 
         for attr, value in (
