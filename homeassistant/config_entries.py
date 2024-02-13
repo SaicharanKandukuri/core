@@ -2290,11 +2290,8 @@ async def support_remove_from_device(hass: HomeAssistant, domain: str) -> bool:
 
 async def support_entry_reconfigure(hass: HomeAssistant, domain: str) -> bool:
     """Test if a domain supports reconfigure flow."""
-    return bool(
-        loader.is_component_module_loaded(hass, f"{domain}.config_flow")
-        and (handler := HANDLERS.get(domain))
-        and hasattr(handler, "async_step_reconfigure")
-    )
+    handler = await _async_get_flow_handler(hass, domain, {})
+    return bool(handler and hasattr(handler, "async_step_reconfigure"))
 
 
 async def _load_integration(
